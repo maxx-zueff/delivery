@@ -6,7 +6,7 @@ const server = http.createServer(async (req, res) => {
     if(req.url === '/main') { // check if the URL is '/main'
         let result = await main(); // call the main function
         res.statusCode = 200;
-        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify(result));
     } else {
         res.statusCode = 200;
