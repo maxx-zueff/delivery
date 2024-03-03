@@ -393,7 +393,7 @@ async function createOrder(orderData, token) {
   }
 
   // Сформировать новый массив из номеров заказов
-  return order;
+  return result;
 }
 
 async function main() {
@@ -420,8 +420,8 @@ async function main() {
     const order = await createOrder(orderData, token)
 
     return {
-      "new_order" : order,
-      "result": order ? result : false
+      "new_order" : result.length > 0 ? true : false,
+      "result": result.length > 0 ? result : false
     };
   }
 };
