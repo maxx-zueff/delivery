@@ -393,15 +393,12 @@ async function createOrder(orderData, token) {
   }
 
   // Сформировать новый массив из номеров заказов
-  return {
-    "new_order" : new_order,
-    "result": new_order ? result : false
-  };
+  return order;
 }
 
 async function main() {
   let [res_cookie] = await getDocuments("mycollection");
-  const browser = await puppeteer.launch();
+  const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
   const page = await browser.newPage();
   page.setViewport({ width: 1366, height: 768 });
 
@@ -416,16 +413,15 @@ async function main() {
   const data = await dataGrab(page);
   if (!data) {
     await browser.close();
-    return {
-      "yandex_order": false 
-    };
+    return {"new_order":false,"result":false};
   } else {
     await save(data);
     await browser.close();
     const order = await createOrder(orderData, token)
 
     return {
-      "yandex_order": order 
+      "new_order" : order,
+      "result": order ? result : false
     };
   }
 };
