@@ -378,7 +378,6 @@ async function createOrder(orderData, token) {
     order.items = [];
   }
 
-  let new_order = Object.keys(groups).length > 0 ? true : false;
   let result = [];
 
   for (let key in groups) {
@@ -392,7 +391,6 @@ async function createOrder(orderData, token) {
       result.push(subArray);
   }
 
-  // Сформировать новый массив из номеров заказов
   return result;
 }
 
@@ -417,7 +415,7 @@ async function main() {
   } else {
     await save(data);
     await browser.close();
-    const order = await createOrder(orderData, token)
+    const result = await createOrder(orderData, token)
 
     return {
       "new_order" : result.length > 0 ? true : false,
