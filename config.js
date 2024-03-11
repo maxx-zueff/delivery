@@ -10,7 +10,7 @@ const order = {
       },
       "address": {
         "fullname": "Россия, Ярославль, улица Бабича, 3В, Лепесток",
-        "coordinates": [39.770583, 57.699097],
+        "coordinates": [39.774688, 57.701295],
         "comment": "Салон цветов ЛЕПЕСТОК "
       },
       "skip_confirmation": true,

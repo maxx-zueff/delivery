@@ -10,7 +10,7 @@ const token = require("./config").token;
 const auth = require("./puppeteer/auth.js");
 const dataGrab = require("./puppeteer/orders.js");
 const geocoder_key = require("./config.js").geocoder_key;
-const aasync = require('async');
+const moment = require("moment");
 
 puppeteer.use(StealthPlugin());
 
@@ -35,231 +35,152 @@ async function getDocuments(collectionName) {
   });
 }
 
+async function removeOldDocs(collection, saved_docs, new_docs) {
+  saved_docs.map(async (doc) => {
+    if (new_docs.filter((item) => item.order === doc.order).length === 0) {
+      await collection.remove({ _id: doc._id }, function (err, doc) {
+        if (err) throw new Error(err);
+      });
+    }
+  });
+}
+
+async function updateDocument(collection, target, update) {
+  await collection.updateOne(target, { $set: update }, function (err, res) {
+    if (err) throw new Error(err);
+    if (res) return true;
+  });
+}
+
+async function setCoordinate(item) {
+  const collection = db.collection("orders");
+
+  if (item.address.length > 0) {
+    const geocode = item.address.replace(/ /g, "+");
+    try {
+      const geocodeResponse = await axios.get(
+        "https://geocode-maps.yandex.ru/1.x/",
+        {
+          params: {
+            apikey: geocoder_key,
+            format: "json",
+            geocode: geocode,
+          },
+          timeout: 5000,
+        }
+      );
+      const result =
+        geocodeResponse.data.response.GeoObjectCollection.featureMember[0]
+          .GeoObject.Point.pos;
+      const coordinates = result.split(" ").map(Number);
+      await updateDocument(
+        collection,
+        { _id: item._id },
+        { coordinates: coordinates }
+      );
+    } catch (err) {
+      console.log(err);
+      throw new Error(err);
+    }
+  }
+}
+
+async function insertOrUpdate(collection, saved_docs, new_docs) {
+  new_docs.map(async (item) => {
+    const existingDoc = saved_docs.find((doc) => doc.order === item.order);
+
+    if (existingDoc) {
+      if (
+        existingDoc.address !== item.address ||
+        existingDoc.comment !== item.comment ||
+        existingDoc.date !== item.date ||
+        existingDoc.delivery !== item.delivery ||
+        existingDoc.phone !== item.phone ||
+        existingDoc.time !== item.time
+      ) {
+        await updateDocument(collection, { order: item.order }, item);
+        if (existingDoc.address !== item.address)
+          await updateDocument(
+            collection,
+            { order: item.order },
+            { coordinates: null }
+          );
+      }
+    } else {
+      await collection.insertOne(item, function (err, res) {
+        if (err) throw new Error(err);
+        if (res) return true;
+      });
+    }
+  });
+}
+
 async function save(data) {
-
-  data = data.filter((item, index, self) =>
-    index === self.findIndex((t) => (
-      t.order === item.order
-    ))
-  )
-
   const collection = db.collection("orders");
   const saved_docs = await getDocuments("orders");
 
-//  return aasync.series([
-//     function(callback) {
-//       saved_docs.map(async (doc) => {
-//         if (data.filter((item) => item.order === doc.order).length === 0) {
-//           collection.updateOne(
-//             { _id: doc._id },
-//             { $set: { status: 1 } },
-//             function (err, docs) {
-//               if (err) throw new Error(err);
-//               if (docs)  callback(null, '1');          
-//             }
-//           );
-//         }
-//       })
-//     },
-//     function(callback) {
-//       data.map((item) => {
-//          collection.update(
-//           { order: item.order },
-//           { $set: { ...item, status: 0 } },
-//           { upsert: true },
-//           function (err, res) {
-//             if (err) throw new Error(err);
-//             if (res) callback(null, '2');
-//           }
-//         );
-//       })
-//     },
-//     function(callback) {
-//       getDocuments("orders")
-//         .then(docs => {
-//           const updatedDocs = assignGroupByTimeDifference(new_docs);
-//           updatedDocs.map(async (doc) => {
-//             await collection.updateOne(
-//               { _id: doc._id },
-//               { $set: { group: doc.group } },
-//               function (err, docs) {
-//                 if (err) throw new Error(err);
-//                 if (docs) callback(null, '3');
-//               }
-//             );
-//           })
-
-//       })
-//     },
-//     function(callback) {
-//       const filtered_docs = new_docs.filter((doc) => doc.coordinates.length === 0);
-//           filtered_docs.map(async (doc) => {
-//       const geocode = doc.address.replace(/ /g, "+");
-//       try {
-//         const geocodeResponse = await axios.get(
-//           "https://geocode-maps.yandex.ru/1.x/",
-//           {
-//             params: {
-//               apikey: geocoder_key,
-//               format: "json",
-//               geocode: geocode,
-//             },
-//             timeout: 5000,
-//           }
-//         );
-//         const result =
-//           geocodeResponse.data.response.GeoObjectCollection.featureMember[0]
-//             .GeoObject.Point.pos;
-//         const coordinates = result.split(" ").map(Number);
-//         await collection.updateOne(
-//           { _id: doc._id },
-//           { $set: { coordinates: coordinates } },
-//           function (err, docs) {
-//             if (err) throw new Error(err);
-//             if (docs) callback(null, '4');;
-//           }
-//         );
-//       } catch (err) {
-//         throw new Error(err);
-//       }
-//     })
-//     },
-    
-// ], function(err, results) {
-//     console.log(results);
-//     console.log(err);
-//     // results is equal to ['one','two']
-// });
-
-
-  const updateOldStatus = await Promise.all(
-    saved_docs.map(async (doc) => {
-      if (data.filter((item) => item.order === doc.order).length === 0) {
-        await collection.updateOne(
-          { _id: doc._id },
-          { $set: { status: 1 } },
-          function (err, docs) {
-            if (err) throw new Error(err);
-            if (docs) return true;            
-          }
-        );
-      }
-    })
+  data = data.filter(
+    (item, index, self) =>
+      index === self.findIndex((t) => t.order === item.order)
   );
 
-  const saveNew = await Promise.all(
-    data.map(async (item) => {
-      await collection.update(
-        { order: item.order },
-        { $set: { ...item, status: 0 } },
-        { upsert: true },
-        function (err, res) {
-          if (err) throw new Error(err);
-          if (res) return true;
-        }
-      );
-    })
-  );
+  await removeOldDocs(collection, saved_docs, data);
+  await insertOrUpdate(collection, saved_docs, data);
 
   const new_docs = await getDocuments("orders");
-  const updatedDocs = assignGroupByTimeDifference(new_docs);
-  const updateGroups = await Promise.all(
-    updatedDocs.map(async (doc) => {
-      await collection.updateOne(
-        { _id: doc._id },
-        { $set: { group: doc.group } },
-        function (err, docs) {
-          if (err) throw new Error(err);
-          if (docs) return true;
-        }
-      );
-    })
+  const updatedDocs = await assignGroupByTimeDifference(new_docs);
+  console.log(updatedDocs);
+  updatedDocs.map(async (doc) => {
+    await updateDocument(collection, { _id: doc._id }, { group: doc.group });
+  });
+
+  const filtered_docs = new_docs.filter(
+    (doc) => doc.coordinates === null || doc.coordinates.length === 0
   );
 
-  const filtered_docs = new_docs.filter((doc) => doc.coordinates.length === 0);
-  const setCoordinate = await Promise.all(
-    filtered_docs.map(async (doc) => {
-      const geocode = doc.address.replace(/ /g, "+");
-      try {
-        const geocodeResponse = await axios.get(
-          "https://geocode-maps.yandex.ru/1.x/",
-          {
-            params: {
-              apikey: geocoder_key,
-              format: "json",
-              geocode: geocode,
-            },
-            timeout: 5000,
-          }
-        );
-        const result =
-          geocodeResponse.data.response.GeoObjectCollection.featureMember[0]
-            .GeoObject.Point.pos;
-        const coordinates = result.split(" ").map(Number);
-        await collection.updateOne(
-          { _id: doc._id },
-          { $set: { coordinates: coordinates } },
-          function (err, docs) {
-            if (err) throw new Error(err);
-            if (docs) true;
-          }
-        );
-      } catch (err) {
-        throw new Error(err);
-      }
-    })
-  );
-
+  filtered_docs.map(async (doc) => {
+    await setCoordinate(doc);
+  });
 }
 
-function assignGroupByTimeDifference(arr) {
-  if (!Array.isArray(arr)) {
+async function assignGroupByTimeDifference(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) {
     console.error("Invalid argument: arr should be an array");
     return;
   }
-  arr.sort(
-    (a, b) =>
-      new Date(`1970-01-01T${a.time}Z`) - new Date(`1970-01-01T${b.time}Z`)
+
+  arr.sort((a, b) =>
+    moment(`1970-01-01T${a.time}Z`).diff(moment(`1970-01-01T${b.time}Z`))
   );
 
-  let maxDifferenceInMinutes = 5;
+  let maxDifferenceInMinutes = 16;
   let groupCounter = 1;
-  let tempTime = arr[0].time;
+  let tempTime = moment(`1970-01-01T${arr[0].time}Z`);
   let tempDelivery = arr[0].delivery;
   let tempDate = arr[0].date;
   let groupSize = 1;
-
-  if (arr[0].status !== 0) {
-    arr[0].group = 0;
-  } else {
-    arr[0].group = groupCounter;
-  }
+  arr[0].group = groupCounter;
 
   for (let i = 1; i < arr.length; i++) {
-    if (arr[i].status === 0) {
-      let diff =
-        Math.abs(
-          new Date(`1970-01-01T${arr[i].time}Z`) -
-            new Date(`1970-01-01T${tempTime}Z`)
-        ) / 60000;
+    if (arr[i].group === null || arr[i].group !== 0) {
+      let currentTime = moment(`1970-01-01T${arr[i].time}Z`);
+      let diff = Math.abs(tempTime.diff(currentTime, "minutes"));
       if (
         diff <= maxDifferenceInMinutes &&
         arr[i].delivery === tempDelivery &&
         arr[i].date === tempDate &&
-        groupSize <= 6
+        groupSize <= 4
       ) {
         arr[i].group = groupCounter;
         groupSize++;
       } else {
         groupCounter++;
         arr[i].group = groupCounter;
-        tempTime = arr[i].time;
+        tempTime = currentTime;
         tempDelivery = arr[i].delivery;
         tempDate = arr[i].date;
         groupSize = 1;
       }
-    } else {
-      arr[i].group = 0;
     }
   }
   return arr;
@@ -267,8 +188,9 @@ function assignGroupByTimeDifference(arr) {
 
 async function createOrder(orderData, token) {
   const docs = await getDocuments("orders");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const groups = {};
+  const today = moment().startOf("day");
+  let target_time = moment();
   const delivery = {
     189: 30,
     289: 40,
@@ -278,34 +200,29 @@ async function createOrder(orderData, token) {
     749: 60,
     549: 60,
   };
-  let targe_time = new Date();
-
-  const groups = {};
 
   for (const doc of docs) {
-    const docDate = new Date(doc.date);
-    docDate.setHours(0, 0, 0, 0);
-
-    if (
-      doc.group !== 0 &&
-      docDate.getTime() === today.getTime() &&
-      doc.time.length > 0
-    ) {
+    const docDate = moment(doc.date).startOf("day");
+    if (doc.group !== 0 && docDate.isSame(today) && doc.time.length > 0) {
+      console.log(doc);
       let deliveryTime = delivery[doc.delivery];
       let time = doc.time;
       let [hours, minutes] = time.split(":").map(Number);
-      targe_time.setHours(hours, minutes);
-      targe_time.setMinutes(targe_time.getMinutes() - deliveryTime);
+      target_time = moment()
+        .hours(hours)
+        .minutes(minutes)
+        .subtract(deliveryTime, "minutes");
 
-      if (targe_time < new Date()) {
+      if (target_time.isBefore(moment())) {
         if (!groups[doc.group]) {
           groups[doc.group] = [];
         }
       }
     }
   }
+
   for (const doc of docs) {
-    if (groups[doc.group] && doc.time.length > 0) {
+    if (groups[doc.group] && doc.time.length > 0 && doc.address.length > 0) {
       groups[doc.group].push({
         point_id: doc.order,
         visit_order: groups[doc.group].length + 2,
@@ -320,17 +237,15 @@ async function createOrder(orderData, token) {
         },
         skip_confirmation: true,
         type: "destination",
-        external_order_id: doc.order.toString()
+        external_order_id: doc.order.toString(),
       });
     }
   }
 
-  
   for (const groupKey of Object.keys(groups)) {
     let order = orderData;
     let group = groups[groupKey];
-
-    order.route_points.push(...group)
+    order.route_points.push(...group);
     for (const doc of group) {
       order.items.push({
         pickup_point: 1,
@@ -339,10 +254,10 @@ async function createOrder(orderData, token) {
         cost_value: "1000.00",
         cost_currency: "RUB",
         quantity: 1,
-        extra_id: doc.point_id.toString()
-      })
+        extra_id: doc.point_id.toString(),
+      });
     }
-    
+
     const requestId = uuidv4();
     const collection = db.collection("orders");
     try {
@@ -352,7 +267,7 @@ async function createOrder(orderData, token) {
         {
           headers: {
             "Accept-Language": "ru",
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -369,34 +284,29 @@ async function createOrder(orderData, token) {
           );
         }
       }
-
     } catch (error) {
-      console.error(error.message);
+      console.error(error);
     }
     let point = order.route_points[0];
     order.route_points = [point];
     order.items = [];
   }
 
-  let result = [];
-
-  for (let key in groups) {
-      let subArray = [];
-      for (let i = 0; i < groups[key].length; i++) {
-          subArray.push({
-              "address": groups[key][i].address.fullname,
-              "order": groups[key][i].external_order_id
-          });
-      }
-      result.push(subArray);
-  }
-
-  return result;
+  return Object.values(groups).map((group) => {
+    return group.map((item) => {
+      return {
+        address: item.address.fullname,
+        order: item.external_order_id,
+      };
+    });
+  });
 }
 
 async function main() {
   let [res_cookie] = await getDocuments("mycollection");
-  const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  const browser = await puppeteer.launch({
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
   const page = await browser.newPage();
   page.setViewport({ width: 1366, height: 768 });
 
@@ -409,19 +319,20 @@ async function main() {
   await page.setCookie(...flowwow);
 
   const data = await dataGrab(page);
+
   if (!data) {
     await browser.close();
-    return {"new_order":false,"result":false};
+    return { new_order: false, result: false };
   } else {
     await save(data);
     await browser.close();
-    const result = await createOrder(orderData, token)
+    const result = await createOrder(orderData, token);
 
     return {
-      "new_order" : result.length > 0 ? true : false,
-      "result": result.length > 0 ? result : false
+      new_order: result.length > 0 ? true : false,
+      result: result.length > 0 ? result : false,
     };
   }
-};
+}
 
 module.exports = main;
