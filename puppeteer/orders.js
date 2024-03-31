@@ -1,9 +1,8 @@
 module.exports = async function dataGrab(page) {
   await page.goto("https://flowwow.com/admin/order/index", {
-    waitUntil: "load",
+    waitUntil: "networkidle2",
     timeout: 0,
   });
-  await page.waitForNavigation({waitUntil: 'networkidle2'})
   await page.waitForSelector('a[data-val="status2"]', { visible: true });
   let spanContent = await page.$eval(
     ".an-orderbar li:nth-child(3) .an-count",
