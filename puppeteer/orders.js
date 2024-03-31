@@ -26,6 +26,7 @@ module.exports = async function dataGrab(page) {
   } else {
     await page.click('a[data-val="status2"]');
     await page.waitForSelector(".list-view", { visible: true, timeout: 3000 });
+    await page.waitForTimeout(10000);
     while (true) {
       const isHidden = await page.$eval(".btn-show-more", (button) =>
         button.classList.contains("hidden")
@@ -34,9 +35,8 @@ module.exports = async function dataGrab(page) {
         break;
       }
       await page.click(".btn-show-more");
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(5000);
     }
-    await page.waitForTimeout(1000);
 
     let data = await page.$$eval(".an-order-block", (blocks) =>
       blocks.map((block) => {
@@ -76,11 +76,12 @@ module.exports = async function dataGrab(page) {
         let additional =
           block.querySelector(".additional-info-block .block-content")
             ?.textContent || "";
-        let comment = `${senderPhone} / ${blockContent} / ${additional}`;
+        let comment = `Доп. номер ${senderPhone} / ${blockContent} / ${additional}`;
         let phone = block
           .querySelector('span[data-type="receiver"]')
           ?.getAttribute("data-phone");
-        phone = phone !== undefined ? "+" + phone : senderPhone;
+        phone = phone !== undefined ? (phone.length === 6 ? "+74852" + phone : "+" + phone) : senderPhone;
+        
         let group = "";
         let itemSumElements = block.querySelectorAll(".item-sum") || "";
         let delivery =

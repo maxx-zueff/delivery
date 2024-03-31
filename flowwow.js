@@ -11,6 +11,7 @@ const auth = require("./puppeteer/auth.js");
 const dataGrab = require("./puppeteer/orders.js");
 const geocoder_key = require("./config.js").geocoder_key;
 const moment = require("moment");
+const flow_async = require("async");
 
 puppeteer.use(StealthPlugin());
 
@@ -40,6 +41,7 @@ async function removeOldDocs(collection, saved_docs, new_docs) {
     if (new_docs.filter((item) => item.order === doc.order).length === 0) {
       await collection.remove({ _id: doc._id }, function (err, doc) {
         if (err) throw new Error(err);
+        return doc;
       });
     }
   });
@@ -48,7 +50,7 @@ async function removeOldDocs(collection, saved_docs, new_docs) {
 async function updateDocument(collection, target, update) {
   await collection.updateOne(target, { $set: update }, function (err, res) {
     if (err) throw new Error(err);
-    if (res) return true;
+    if (res) return res;
   });
 }
 
@@ -73,11 +75,10 @@ async function setCoordinate(item) {
         geocodeResponse.data.response.GeoObjectCollection.featureMember[0]
           .GeoObject.Point.pos;
       const coordinates = result.split(" ").map(Number);
-      await updateDocument(
-        collection,
-        { _id: item._id },
-        { coordinates: coordinates }
-      );
+      
+
+      return coordinates;
+      
     } catch (err) {
       console.log(err);
       throw new Error(err);
@@ -100,7 +101,7 @@ async function insertOrUpdate(collection, saved_docs, new_docs) {
       ) {
         await updateDocument(collection, { order: item.order }, item);
         if (existingDoc.address !== item.address)
-          await updateDocument(
+          return await updateDocument(
             collection,
             { order: item.order },
             { coordinates: null }
@@ -109,7 +110,7 @@ async function insertOrUpdate(collection, saved_docs, new_docs) {
     } else {
       await collection.insertOne(item, function (err, res) {
         if (err) throw new Error(err);
-        if (res) return true;
+        if (res) return res;
       });
     }
   });
@@ -124,30 +125,45 @@ async function save(data) {
       index === self.findIndex((t) => t.order === item.order)
   );
 
-  await removeOldDocs(collection, saved_docs, data);
-  await insertOrUpdate(collection, saved_docs, data);
+
+  const res1 = await removeOldDocs(collection, saved_docs, data);
+  const res2 = await insertOrUpdate(collection, saved_docs, data);
 
   const new_docs = await getDocuments("orders");
-  const updatedDocs = await assignGroupByTimeDifference(new_docs);
-  console.log(updatedDocs);
+  console.log("Из БД", new_docs)
+  
+  const updatedDocs = assignGroupByTimeDifference(new_docs);
+  console.log("Группы", updatedDocs);
   updatedDocs.map(async (doc) => {
     await updateDocument(collection, { _id: doc._id }, { group: doc.group });
   });
-
-  const filtered_docs = new_docs.filter(
-    (doc) => doc.coordinates === null || doc.coordinates.length === 0
-  );
-
-  filtered_docs.map(async (doc) => {
-    await setCoordinate(doc);
-  });
+  
+  for (let i = 0; i < new_docs.length; i++) {
+    const doc = new_docs[i];
+    if (doc.coordinates === null || doc.coordinates.length === 0) {
+      let coordinates = await setCoordinate(doc);
+      if (coordinates !== undefined) {
+        let i = await updateDocument(
+          collection,
+          { _id: doc._id },
+          { coordinates: coordinates }
+          );
+      }
+    }
+  }
+    
+  // Почему возвращает без координат?
+  const result = await getDocuments("orders");
+  return result;
 }
 
-async function assignGroupByTimeDifference(arr) {
+function assignGroupByTimeDifference(arr) {
   if (!Array.isArray(arr) || arr.length === 0) {
     console.error("Invalid argument: arr should be an array");
     return;
   }
+
+  arr = arr.filter(item => item.group !== 0);
 
   arr.sort((a, b) =>
     moment(`1970-01-01T${a.time}Z`).diff(moment(`1970-01-01T${b.time}Z`))
@@ -186,8 +202,8 @@ async function assignGroupByTimeDifference(arr) {
   return arr;
 }
 
-async function createOrder(orderData, token) {
-  const docs = await getDocuments("orders");
+async function createOrder(docs, orderData, token) {
+  console.log("Формирует заказ", docs)
   const groups = {};
   const today = moment().startOf("day");
   let target_time = moment();
@@ -204,7 +220,6 @@ async function createOrder(orderData, token) {
   for (const doc of docs) {
     const docDate = moment(doc.date).startOf("day");
     if (doc.group !== 0 && docDate.isSame(today) && doc.time.length > 0) {
-      console.log(doc);
       let deliveryTime = delivery[doc.delivery];
       let time = doc.time;
       let [hours, minutes] = time.split(":").map(Number);
@@ -222,6 +237,7 @@ async function createOrder(orderData, token) {
   }
 
   for (const doc of docs) {
+    
     if (groups[doc.group] && doc.time.length > 0 && doc.address.length > 0) {
       groups[doc.group].push({
         point_id: doc.order,
@@ -319,14 +335,15 @@ async function main() {
   await page.setCookie(...flowwow);
 
   const data = await dataGrab(page);
+  await browser.close();
+
 
   if (!data) {
-    await browser.close();
     return { new_order: false, result: false };
   } else {
-    await save(data);
-    await browser.close();
-    const result = await createOrder(orderData, token);
+    const newData = await save(data);
+    // const newData = await newSave(data);
+    const result = await createOrder(newData, orderData, token);
 
     return {
       new_order: result.length > 0 ? true : false,
