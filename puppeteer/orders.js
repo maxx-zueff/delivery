@@ -3,8 +3,8 @@ module.exports = async function dataGrab(page) {
     waitUntil: "load",
     timeout: 0,
   });
-  await page.waitForSelector('a[data-val="status2"]', { visible: true });
   await page.waitForNavigation({waitUntil: 'networkidle2'})
+  await page.waitForSelector('a[data-val="status2"]', { visible: true });
   let spanContent = await page.$eval(
     ".an-orderbar li:nth-child(3) .an-count",
     (span) => span.textContent
