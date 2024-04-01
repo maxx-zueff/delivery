@@ -38,6 +38,15 @@ module.exports = async function dataGrab(page) {
       await page.waitForTimeout(5000);
     }
 
+    let currentBlocksCount = await page.$$eval(".an-order-block", (blocks) => blocks.length);
+    while (currentBlocksCount !== spanContent) {
+      console.log(`Текущее количество блоков: ${currentBlocksCount}, ожидаем: ${spanContent}`);
+      await page.waitForTimeout(1000); // Ждем 1 секунду перед следующей проверкой
+      currentBlocksCount = await page.$$eval(".an-order-block", (blocks) => blocks.length);
+    }
+  
+    console.log("Количество блоков соответствует ожидаемому. Продолжаем выполнение...");
+  
     let data = await page.$$eval(".an-order-block", (blocks) =>
       blocks.map((block) => {
         function convertMonthNameToNumber(monthName) {
@@ -62,6 +71,9 @@ module.exports = async function dataGrab(page) {
         let dateDeliveryElement =
           block.querySelector(".an-deliverydatetime")?.textContent || "";
         let day = dateDeliveryElement.match(/\d+/)[0];
+        if (day.length === 1) {
+          day = "0" + day;
+        }
         let monthText = dateDeliveryElement.match(/(февраля|марта|апреля)/)[0];
         let month = convertMonthNameToNumber(monthText);
         let year = 2024;
@@ -126,7 +138,6 @@ module.exports = async function dataGrab(page) {
     );
 
     if (data.length !== spanContent) {
-      console.log(data.length, spanContent);
       console.log("Захвачены лишние заказы");
       return false;
     } else {

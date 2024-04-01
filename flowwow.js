@@ -218,7 +218,7 @@ async function createOrder(docs, orderData, token) {
   };
 
   for (const doc of docs) {
-    const docDate = moment(doc.date).startOf("day");
+    const docDate = moment(doc.date, "YYYY-MM-DD").startOf("day");
     if (doc.group !== 0 && docDate.isSame(today) && doc.time.length > 0) {
       let deliveryTime = delivery[doc.delivery];
       let time = doc.time;
