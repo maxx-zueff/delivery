@@ -218,7 +218,8 @@ async function createOrder(docs, orderData, token) {
   };
 
   for (const doc of docs) {
-    const docDate = moment(doc.date, "YYYY-MM-DD").startOf("day");
+    const docDate = moment(doc.date).startOf("day");
+    console.log(docDate)
     if (doc.group !== 0 && docDate.isSame(today) && doc.time.length > 0) {
       let deliveryTime = delivery[doc.delivery];
       let time = doc.time;
@@ -229,6 +230,7 @@ async function createOrder(docs, orderData, token) {
         .subtract(deliveryTime, "minutes");
 
       if (target_time.isBefore(moment())) {
+        console.log("Есть заказы для поиска курьера")
         if (!groups[doc.group]) {
           groups[doc.group] = [];
         }
