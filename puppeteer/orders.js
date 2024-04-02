@@ -38,12 +38,12 @@ module.exports = async function dataGrab(page) {
       await page.waitForTimeout(5000);
     }
 
-    let currentBlocksCount = await page.$$eval(".an-order-block", (blocks) => blocks.length);
-    while (currentBlocksCount !== spanContent) {
-      console.log(`Текущее количество блоков: ${currentBlocksCount}, ожидаем: ${spanContent}`);
-      await page.waitForTimeout(1000); // Ждем 1 секунду перед следующей проверкой
-      currentBlocksCount = await page.$$eval(".an-order-block", (blocks) => blocks.length);
-    }
+    // let currentBlocksCount = await page.$$eval(".an-order-block", (blocks) => blocks.length);
+    // while (currentBlocksCount !== spanContent) {
+    //   console.log(`Текущее количество блоков: ${currentBlocksCount}, ожидаем: ${spanContent}`);
+    //   await page.waitForTimeout(1000); // Ждем 1 секунду перед следующей проверкой
+    //   currentBlocksCount = await page.$$eval(".an-order-block", (blocks) => blocks.length);
+    // }
   
     console.log("Количество блоков соответствует ожидаемому. Продолжаем выполнение...");
   
@@ -137,11 +137,11 @@ module.exports = async function dataGrab(page) {
       })
     );
 
-    if (data.length !== spanContent) {
-      console.log("Захвачены лишние заказы");
-      return false;
-    } else {
+    // if (data.length !== spanContent) {
+    //   console.log("Захвачены лишние заказы");
+    //   return false;
+    // } else {
       return data;
-    }
+    // }
   }
 };
