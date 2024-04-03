@@ -229,7 +229,10 @@ async function createOrder(docs, orderData, token) {
         .minutes(minutes)
         .subtract(deliveryTime, "minutes");
 
-      if (target_time.isBefore(moment())) {
+      let now_moment = moment();
+      console.log(target_time, now_moment)
+
+      if (target_time.isBefore(now_moment)) {
         console.log("Есть заказы для поиска курьера")
         if (!groups[doc.group]) {
           groups[doc.group] = [];
