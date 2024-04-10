@@ -11,6 +11,8 @@ const auth = require("./puppeteer/auth.js");
 const dataGrab = require("./puppeteer/orders.js");
 const geocoder_key = require("./config.js").geocoder_key;
 const moment = require("moment");
+require('moment-timezone');
+moment.tz.setDefault("Europe/Moscow");
 const flow_async = require("async");
 
 puppeteer.use(StealthPlugin());
