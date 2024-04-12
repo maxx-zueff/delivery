@@ -134,7 +134,7 @@ async function save(data) {
   const new_docs = await getDocuments("orders");
   console.log("Из БД", new_docs)
   
-  const updatedDocs = assignGroupByTimeDifference(new_docs);
+  const updatedDocs = await assignGroupByTimeDifference(new_docs);
   console.log("Группы", updatedDocs);
   updatedDocs.map(async (doc) => {
     await updateDocument(collection, { _id: doc._id }, { group: doc.group });
@@ -232,6 +232,7 @@ async function createOrder(docs, orderData, token) {
         .subtract(deliveryTime, "minutes");
 
       let now_moment = moment();
+      console.log("На флоу есть заказы")
       console.log(target_time, now_moment)
 
       if (target_time.isBefore(now_moment)) {
@@ -351,6 +352,7 @@ async function main() {
     const newData = await save(data);
     // const newData = await newSave(data);
     const result = await createOrder(newData, orderData, token);
+    console.log(result);
 
     return {
       new_order: result.length > 0 ? true : false,
