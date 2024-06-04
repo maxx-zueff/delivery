@@ -342,11 +342,25 @@ async function main() {
   const flowwow = res_cookie.flowwow;
   await page.setCookie(...flowwow);
 
+  await page.goto("https://flowwow.com/admin/order/index", {
+    waitUntil: "networkidle2",
+    timeout: 0,
+  });
+
+  let idStore = (await page.$('.shop-id')) || "";
+
+  if (idStore.length === 0) {
+    console.log("No document found in cookies collection");
+    res_cookie = await auth(page, db);
+  }
+
+
   const data = await dataGrab(page);
   await browser.close();
 
 
   if (!data) {
+    console.log("No data found");
     return { new_order: false, result: false };
   } else {
     const newData = await save(data);

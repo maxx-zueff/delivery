@@ -3,10 +3,11 @@ module.exports = async function dataGrab(page) {
     waitUntil: "networkidle2",
     timeout: 0,
   });
+
   try {
-    await page.waitForSelector('a[data-val="status2"]', { visible: true, timeout: 60000 });
-  }
-  catch (e) {
+    await page.waitForSelector('a[data-val="status2"]', { visible: true });
+  } catch (e) {
+    console.log(e);
     return false;
   }
 
@@ -50,9 +51,15 @@ module.exports = async function dataGrab(page) {
     //   await page.waitForTimeout(1000); // Ждем 1 секунду перед следующей проверкой
     //   currentBlocksCount = await page.$$eval(".an-order-block", (blocks) => blocks.length);
     // }
-  
-    console.log("Количество блоков соответствует ожидаемому. Продолжаем выполнение...");
-  
+
+    console.log(
+      "Количество блоков соответствует ожидаемому. Продолжаем выполнение..."
+    );
+
+    await page.screenshot({
+      path: "screenshot.jpg",
+    });
+
     let data = await page.$$eval(".an-order-block", (blocks) =>
       blocks.map((block) => {
         function convertMonthNameToNumber(monthName) {
@@ -63,6 +70,22 @@ module.exports = async function dataGrab(page) {
               return "03";
             case "апреля":
               return "04";
+            case "мая":
+              return "05";
+            case "июня":
+              return "06";
+            case "июля":
+              return "07";
+            case "августа":
+              return "08";
+            case "сентября":
+              return "09";
+            case "октября":
+              return "10";
+            case "ноября":
+              return "11";
+            case "декабря":
+              return "12";
           }
         }
 
@@ -80,7 +103,9 @@ module.exports = async function dataGrab(page) {
         if (day.length === 1) {
           day = "0" + day;
         }
-        let monthText = dateDeliveryElement.match(/(февраля|марта|апреля)/)[0];
+        let monthText = dateDeliveryElement.match(
+          /(февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)/
+        )[0];
         let month = convertMonthNameToNumber(monthText);
         let year = 2024;
         let date = `${year}-${month}-${day}`;
@@ -98,8 +123,13 @@ module.exports = async function dataGrab(page) {
         let phone = block
           .querySelector('span[data-type="receiver"]')
           ?.getAttribute("data-phone");
-        phone = phone !== undefined ? (phone.length === 6 ? "+74852" + phone : "+" + phone) : senderPhone;
-        
+        phone =
+          phone !== undefined
+            ? phone.length === 6
+              ? "+74852" + phone
+              : "+" + phone
+            : senderPhone;
+
         let group = "";
         let itemSumElements = block.querySelectorAll(".item-sum") || "";
         let delivery =
@@ -147,7 +177,7 @@ module.exports = async function dataGrab(page) {
     //   console.log("Захвачены лишние заказы");
     //   return false;
     // } else {
-      return data;
+    return data;
     // }
   }
 };

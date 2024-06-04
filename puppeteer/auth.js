@@ -18,6 +18,10 @@ module.exports = async function auth(page, db) {
   
     await page.waitForNavigation({waitUntil: 'networkidle2'})
     const cookies = await page.cookies();
+
+    await db.mycollection.remove({}, function (err) {
+      if (err) console.log(err)
+    })
     
     await db.mycollection.save({"flowwow": cookies}, function (err, res) {
       if (err) console.log(err)
