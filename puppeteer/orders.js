@@ -56,10 +56,6 @@ module.exports = async function dataGrab(page) {
       "Количество блоков соответствует ожидаемому. Продолжаем выполнение..."
     );
 
-    await page.screenshot({
-      path: "screenshot.jpg",
-    });
-
     let data = await page.$$eval(".an-order-block", (blocks) =>
       blocks.map((block) => {
         function convertMonthNameToNumber(monthName) {
