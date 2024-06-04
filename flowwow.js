@@ -210,7 +210,7 @@ async function createOrder(docs, orderData, token) {
   const today = moment().startOf("day");
   let target_time = moment();
   const delivery = {
-    189: 30,
+    179: 30,
     289: 40,
     379: 40,
     389: 40,
