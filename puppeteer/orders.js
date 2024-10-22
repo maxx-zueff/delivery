@@ -33,7 +33,14 @@ module.exports = async function dataGrab(page) {
   } else {
     await page.click('a[data-val="status2"]');
     await page.waitForSelector(".list-view", { visible: true, timeout: 3000 });
-    await page.waitForTimeout(10000);
+
+    await page.waitForFunction(() => {
+      const blocks = document.querySelectorAll('.an-order-block');
+      return blocks.length > 0;
+    }, { timeout: 30000 });
+
+    await page.waitForTimeout(2000);
+
     while (true) {
       const isHidden = await page.$eval(".btn-show-more", (button) =>
         button.classList.contains("hidden")
