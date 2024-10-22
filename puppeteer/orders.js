@@ -37,7 +37,7 @@ module.exports = async function dataGrab(page) {
     await page.waitForFunction(() => {
       const blocks = document.querySelectorAll('.an-order-block');
       return blocks.length > 0;
-    }, { timeout: 30000 });
+    }, { timeout: 2000 });
 
     await page.waitForTimeout(2000);
 
@@ -63,8 +63,9 @@ module.exports = async function dataGrab(page) {
       "Количество блоков соответствует ожидаемому. Продолжаем выполнение..."
     );
 
-    let data = await page.$$eval(".an-order-block", (blocks) =>
-      blocks.map((block) => {
+    let data = await page.evaluate(() => {
+      const blocks = document.querySelectorAll('.an-order-block');
+      return Array.from(blocks).map(block => {
         function convertMonthNameToNumber(monthName) {
           switch (monthName) {
             case "февраля":
@@ -174,7 +175,7 @@ module.exports = async function dataGrab(page) {
           coordinates,
         };
       })
-    );
+  });
 
     // if (data.length !== spanContent) {
     //   console.log("Захвачены лишние заказы");
