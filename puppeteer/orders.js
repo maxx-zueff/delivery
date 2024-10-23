@@ -37,7 +37,7 @@ module.exports = async function dataGrab(page) {
     await page.waitForFunction(() => {
       const blocks = document.querySelectorAll('.an-order-block');
       return blocks.length > 0;
-    }, { timeout: 2000 });
+    }, { timeout: 5000 });
 
     await page.waitForTimeout(2000);
 
