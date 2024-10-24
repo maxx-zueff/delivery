@@ -37,9 +37,9 @@ module.exports = async function dataGrab(page) {
     await page.waitForFunction(() => {
       const blocks = document.querySelectorAll('.an-order-block');
       return blocks.length > 0;
-    }, { timeout: 5000 });
+    }, { timeout: 10000 });
 
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
 
     while (true) {
       const isHidden = await page.$eval(".btn-show-more", (button) =>
@@ -134,6 +134,10 @@ module.exports = async function dataGrab(page) {
               : "+" + phone
             : senderPhone;
 
+            if (phone === "+undefined" || !phone) {
+              return false;
+            }
+
         let group = "";
         let itemSumElements = block.querySelectorAll(".item-sum") || "";
         let delivery =
@@ -163,6 +167,8 @@ module.exports = async function dataGrab(page) {
           }
         }
 
+        
+
         return {
           order,
           address,
@@ -177,11 +183,13 @@ module.exports = async function dataGrab(page) {
       })
   });
 
-    // if (data.length !== spanContent) {
-    //   console.log("Захвачены лишние заказы");
-    //   return false;
-    // } else {
-    return data;
+  const hasInvalidPhone = data.some(item => !item || item.phone === "+undefined" || !item.phone);
+  if (hasInvalidPhone) {
+    console.log("Found order with invalid phone number, stopping execution");
+    return false;
+  }
+
+  return data;
     // }
   }
 };
