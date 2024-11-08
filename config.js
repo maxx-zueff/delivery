@@ -31,6 +31,6 @@ const order = {
 };
 
 const token = 'y0_AgAAAABom-G9AAc6MQAAAADgYVtmAd8k1lO_RLCBcOQ2H-H35JnyRsg';
-const geocoder_key = '2ddc5596-3c85-40fc-a4c3-0198a7779dcb';
+const geocoder_key = 'fecf23f3-e364-49d6-a0b2-c3a2801b6bda';
 
 module.exports = {order, token, geocoder_key}
