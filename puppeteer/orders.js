@@ -11,26 +11,26 @@ module.exports = async function dataGrab(page) {
     return false;
   }
 
-  let spanContent = await page.$eval(
-    ".an-orderbar li:nth-child(3) .an-count",
-    (span) => span.textContent
-  );
-  spanContent = parseInt(spanContent, 10);
+  // let spanContent = await page.$eval(
+  //   ".an-orderbar li:nth-child(3) .an-count",
+  //   (span) => span.textContent
+  // );
+  // spanContent = parseInt(spanContent, 10);
 
-  while (isNaN(spanContent)) {
-    console.log("spanContent is NaN, waiting and retrying...");
-    await page.waitForTimeout(1000); // Wait for 5 seconds before retrying
-    spanContent = await page.$eval(
-      ".an-orderbar li:nth-child(3) .an-count",
-      (span) => span.textContent
-    );
-    spanContent = parseInt(spanContent, 10);
-  }
+  // while (isNaN(spanContent)) {
+  //   console.log("spanContent is NaN, waiting and retrying...");
+  //   await page.waitForTimeout(1000); // Wait for 5 seconds before retrying
+  //   spanContent = await page.$eval(
+  //     ".an-orderbar li:nth-child(3) .an-count",
+  //     (span) => span.textContent
+  //   );
+  //   spanContent = parseInt(spanContent, 10);
+  // }
 
-  if (spanContent === 0) {
-    console.log("Принятых заказов 0, stopping execution");
-    return false;
-  } else {
+  // if (spanContent === 0) {
+  //   console.log("Принятых заказов 0, stopping execution");
+  //   return false;
+  // } else {
     await page.click('a[data-val="status2"]');
     await page.waitForSelector(".list-view", { visible: true, timeout: 3000 });
 
@@ -191,5 +191,5 @@ module.exports = async function dataGrab(page) {
 
   return data;
     // }
-  }
+  // }
 };
