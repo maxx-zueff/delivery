@@ -32,7 +32,7 @@ module.exports = async function dataGrab(page) {
   //   return false;
   // } else {
     await page.click('a[data-val="status2"]');
-    await page.waitForSelector(".list-view", { visible: true, timeout: 3000 });
+    await page.waitForSelector(".list-view", { visible: true, timeout: 10000 });
 
     await page.waitForFunction(() => {
       const blocks = document.querySelectorAll('.an-order-block');
