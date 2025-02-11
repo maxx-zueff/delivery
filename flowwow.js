@@ -327,51 +327,61 @@ async function createOrder(docs, orderData, token) {
 }
 
 async function main() {
-  let [res_cookie] = await getDocuments("mycollection");
-  const browser = await puppeteer.launch({
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
-  const page = await browser.newPage();
-  page.setViewport({ width: 1366, height: 768 });
+  let browser = null;
+  try {
+    let [res_cookie] = await getDocuments("mycollection");
+    const browser = await puppeteer.launch({
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+    const page = await browser.newPage();
+    page.setViewport({ width: 1366, height: 768 });
 
-  if (!res_cookie) {
-    console.log("No document found in cookies collection");
-    res_cookie = await auth(page, db);
-  }
+    if (!res_cookie) {
+      console.log("No document found in cookies collection");
+      res_cookie = await auth(page, db);
+    }
 
-  const flowwow = res_cookie.flowwow;
-  await page.setCookie(...flowwow);
+    const flowwow = res_cookie.flowwow;
+    await page.setCookie(...flowwow);
 
-  await page.goto("https://flowwow.com/admin/order/index", {
-    waitUntil: "networkidle2",
-    timeout: 0,
-  });
+    await page.goto("https://flowwow.com/admin/order/index", {
+      waitUntil: "networkidle2",
+      timeout: 0,
+    });
 
-  let idStore = (await page.$('.shop-id')) || "";
+    let idStore = (await page.$('.shop-id')) || "";
 
-  if (idStore.length === 0) {
-    console.log("No document found in cookies collection");
-    res_cookie = await auth(page, db);
-  }
-
-
-  const data = await dataGrab(page);
-  await browser.close();
+    if (idStore.length === 0) {
+      console.log("No document found in cookies collection");
+      res_cookie = await auth(page, db);
+    }
 
 
-  if (!data) {
-    console.log("No data found");
-    return { new_order: false, result: false };
-  } else {
-    const newData = await save(data);
-    // const newData = await newSave(data);
-    const result = await createOrder(newData, orderData, token);
-    console.log(result);
+    const data = await dataGrab(page);
+    await browser.close();
 
-    return {
-      new_order: result.length > 0 ? true : false,
-      result: result.length > 0 ? result : false,
-    };
+
+    if (!data) {
+      console.log("No data found");
+      return { new_order: false, result: false };
+    } else {
+      const newData = await save(data);
+      // const newData = await newSave(data);
+      const result = await createOrder(newData, orderData, token);
+      console.log(result);
+
+      return {
+        new_order: result.length > 0 ? true : false,
+        result: result.length > 0 ? result : false,
+      };
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+    global.gc();
   }
 }
 
