@@ -132,10 +132,10 @@ async function save(data) {
   const res2 = await insertOrUpdate(collection, saved_docs, data);
 
   const new_docs = await getDocuments("orders");
-  console.log("Из БД", new_docs)
+  // console.log("Из БД", new_docs)
   
   const updatedDocs = await assignGroupByTimeDifference(new_docs);
-  console.log("Группы", updatedDocs);
+  // console.log("Группы", updatedDocs);
   updatedDocs.map(async (doc) => {
     await updateDocument(collection, { _id: doc._id }, { group: doc.group });
   });
@@ -205,9 +205,8 @@ function assignGroupByTimeDifference(arr) {
 }
 
 async function createOrder(docs, orderData, token) {
-  console.log("Формирует заказ", docs)
+  // console.log("Формирует заказ", docs)
   const groups = {};
-  const today = moment().startOf("day");
   let target_time = moment();
   const delivery = {
     179: 30,
@@ -220,9 +219,11 @@ async function createOrder(docs, orderData, token) {
   };
 
   for (const doc of docs) {
-    const docDate = moment(doc.date).startOf("day");
-    console.log(docDate)
-    if (doc.group !== 0 && docDate.isSame(today) && doc.time.length > 0) {
+    // console.log(doc);
+
+    if (doc.group != 0 && moment(doc.date).isSame(moment(), 'day')
+      && doc.time.length > 0) {
+      console.log("На флоу есть заказы на сегодня")
       let deliveryTime = delivery[doc.delivery];
       let time = doc.time;
       let [hours, minutes] = time.split(":").map(Number);
@@ -232,7 +233,6 @@ async function createOrder(docs, orderData, token) {
         .subtract(deliveryTime, "minutes");
 
       let now_moment = moment();
-      console.log("На флоу есть заказы")
       console.log(target_time, now_moment)
 
       if (target_time.isBefore(now_moment)) {

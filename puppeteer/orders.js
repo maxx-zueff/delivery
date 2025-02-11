@@ -111,7 +111,7 @@ module.exports = async function dataGrab(page) {
           /(февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)/
         )[0];
         let month = convertMonthNameToNumber(monthText);
-        let year = 2024;
+        let year = 2025;
         let date = `${year}-${month}-${day}`;
         let time = dateDeliveryElement.match(/\d{2}:\d{2}/);
         time = time == null ? "" : time[0];
