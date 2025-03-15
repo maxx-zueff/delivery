@@ -32,12 +32,29 @@ module.exports = async function dataGrab(page) {
   //   return false;
   // } else {
     await page.click('a[data-val="status2"]');
-    await page.waitForSelector(".list-view", { visible: true, timeout: 10000 });
+   
+    try {
+      await page.waitForSelector(".list-view", { visible: true, timeout: 10000 });
+    } catch (e) {
+      console.log("list-view не появился в течение 10 секунд, останавливаем выполнение");
+      return false;
+    }
+    // await page.waitForSelector(".list-view", { visible: true, timeout: 10000 });
 
-    await page.waitForFunction(() => {
-      const blocks = document.querySelectorAll('.an-order-block');
-      return blocks.length > 0;
-    }, { timeout: 10000 });
+    // await page.waitForFunction(() => {
+    //   const blocks = document.querySelectorAll('.an-order-block');
+    //   return blocks.length > 0;
+    // }, { timeout: 10000 });
+
+    try {
+      await page.waitForFunction(() => {
+        const blocks = document.querySelectorAll('.an-order-block');
+        return blocks.length > 0;
+      }, { timeout: 10000 });
+    } catch (e) {
+      console.log("Блоки заказов не загрузились в течение 10 секунд, останавливаем выполнение");
+      return false;
+    }
 
     await page.waitForTimeout(3000);
 
