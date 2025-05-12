@@ -119,6 +119,12 @@ async function insertOrUpdate(collection, saved_docs, new_docs) {
 }
 
 async function save(data) {
+
+  if (!Array.isArray(data)) {
+    console.error("Invalid data: expected an array");
+    return [];
+  }
+
   const collection = db.collection("orders");
   const saved_docs = await getDocuments("orders");
 
@@ -134,29 +140,42 @@ async function save(data) {
   const new_docs = await getDocuments("orders");
   // console.log("Из БД", new_docs)
   
-  const updatedDocs = await assignGroupByTimeDifference(new_docs);
-  // console.log("Группы", updatedDocs);
-  updatedDocs.map(async (doc) => {
-    await updateDocument(collection, { _id: doc._id }, { group: doc.group });
-  });
+  // const updatedDocs = await assignGroupByTimeDifference(new_docs);
+  // // console.log("Группы", updatedDocs);
+  // updatedDocs.map(async (doc) => {
+  //   await updateDocument(collection, { _id: doc._id }, { group: doc.group });
+  // });
+
+  if (Array.isArray(new_docs) && new_docs.length > 0) {
+    const updatedDocs = await assignGroupByTimeDifference(new_docs);
+    
+    // Ensure updatedDocs is an array before mapping
+    if (Array.isArray(updatedDocs)) {
+      updatedDocs.map(async (doc) => {
+        await updateDocument(collection, { _id: doc._id }, { group: doc.group });
+      });
+    }
+  }
   
-  for (let i = 0; i < new_docs.length; i++) {
-    const doc = new_docs[i];
-    if (doc.coordinates === null || doc.coordinates.length === 0) {
-      let coordinates = await setCoordinate(doc);
-      if (coordinates !== undefined) {
-        let i = await updateDocument(
-          collection,
-          { _id: doc._id },
-          { coordinates: coordinates }
+  if (Array.isArray(new_docs)) {
+    for (let i = 0; i < new_docs.length; i++) {
+      const doc = new_docs[i];
+      if (doc && (doc.coordinates === null || doc.coordinates.length === 0)) {
+        let coordinates = await setCoordinate(doc);
+        if (coordinates !== undefined) {
+          let i = await updateDocument(
+            collection,
+            { _id: doc._id },
+            { coordinates: coordinates }
           );
+        }
       }
     }
   }
     
-  // Почему возвращает без координат?
+  // Get the final result
   const result = await getDocuments("orders");
-  return result;
+  return result || [];
 }
 
 function assignGroupByTimeDifference(arr) {
@@ -165,7 +184,7 @@ function assignGroupByTimeDifference(arr) {
     return;
   }
 
-  arr = arr.filter(item => item.group !== 0);
+  arr = arr.filter(item => item && item.group !== 0);
 
   arr.sort((a, b) =>
     moment(`1970-01-01T${a.time}Z`).diff(moment(`1970-01-01T${b.time}Z`))
@@ -361,12 +380,16 @@ async function main() {
     await browser.close();
 
 
-    if (!data) {
+    if (!data || !Array.isArray(data) || data.length === 0) {
       console.log("No data found");
       return { new_order: false, result: false };
     } else {
       const newData = await save(data);
       // const newData = await newSave(data);
+      if (!Array.isArray(newData)) {
+        console.log("Invalid data format after save");
+        return { new_order: false, result: false };
+      }
       const result = await createOrder(newData, orderData, token);
       console.log(result);
 

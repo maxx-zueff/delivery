@@ -170,13 +170,13 @@ module.exports = async function dataGrab(page) {
           delivery,
           coordinates,
         };
-      })
+      }).filter(item => item);
   });
 
   const hasInvalidPhone = data.some(item => !item || item.phone === "+undefined" || !item.phone);
   if (hasInvalidPhone) {
     console.log("Found order with invalid phone number, stopping execution");
-    return false;
+    return [];
   }
 
   return data;
