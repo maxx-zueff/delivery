@@ -18,16 +18,36 @@ module.exports = async function dataGrab(page) {
   }
     await page.waitForTimeout(3000);
 
-    while (true) {
-      const isHidden = await page.$eval(".btn-show-more", (button) =>
-        button.classList.contains("hidden")
-      );
-      if (isHidden) {
-        break;
+    // while (true) {
+    //   const isHidden = await page.$eval(".btn-show-more", (button) =>
+    //     button.classList.contains("hidden")
+    //   );
+    //   if (isHidden) {
+    //     break;
+    //   }
+    //   await page.click(".btn-show-more");
+    //   await page.waitForTimeout(5000);
+    // }
+
+    try {
+      // Wait for the button with a timeout
+      await page.waitForSelector(".btn-show-more", { timeout: 10000 });
+      
+      while (true) {
+        const isHidden = await page.$eval(".btn-show-more", (button) =>
+          button.classList.contains("hidden")
+        );
+        if (isHidden) {
+          break;
+        }
+        await page.click(".btn-show-more");
+        await page.waitForTimeout(5000);
       }
-      await page.click(".btn-show-more");
-      await page.waitForTimeout(5000);
+    } catch (e) {
+      console.log("Could not find or interact with 'Show More' button:", e.message);
+      console.log("Continuing with available data...");
     }
+    
     
     console.log(
       "Количество блоков соответствует ожидаемому. Продолжаем выполнение..."
