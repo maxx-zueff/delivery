@@ -228,7 +228,7 @@ async function createOrder(docs, orderData, token) {
   const groups = {};
   let target_time = moment();
   const delivery = {
-    179: 30,
+    89: 30,
     289: 40,
     379: 40,
     389: 40,
